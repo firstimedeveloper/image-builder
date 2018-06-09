@@ -24,6 +24,10 @@ func main() {
 		}
 	}
 
+	//honestly don't really understand how this works although I did it by myself
+	//first range over data
+	//then range over the height (notice how because pixels are 0,0 at the top left corner, y := height, and x := 0)
+	//then range over the width
 	for i, dp := range data {
 		for y := height; y > (height - (dp * height / 100)); y-- {
 			for x := wbar*i + buff; x <= wbar*(i+1); x++ {
