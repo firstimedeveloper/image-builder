@@ -1,10 +1,13 @@
 package main
 
 import (
+	"fmt"
 	"image"
 	"image/color"
 	"image/png"
+	"io/ioutil"
 	"log"
+	"net/http"
 	"os"
 )
 
@@ -49,4 +52,19 @@ func main() {
 		log.Fatal(err)
 	}
 
+	port := "8000" //os.Getenv("PORT")
+
+	if port == ":" {
+		log.Fatal("$PORT must be set")
+	}
+	http.HandleFunc("/", handler)
+	log.Fatal(http.ListenAndServe(":"+port, nil))
+}
+
+func handler(w http.ResponseWriter, r *http.Request) {
+	content, err := ioutil.ReadFile("index.html")
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Fprintf(w, string(content))
 }
