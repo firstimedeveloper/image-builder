@@ -12,6 +12,7 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"os"
 	"strconv"
 	"strings"
 )
@@ -21,7 +22,7 @@ type dataSet struct {
 }
 
 func main() {
-	port := "8000" //os.Getenv("PORT")
+	port := os.Getenv("PORT")
 
 	if port == ":" {
 		log.Fatal("$PORT must be set")
