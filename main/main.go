@@ -13,7 +13,12 @@ import (
 	"log"
 	"net/http"
 	"strconv"
+	"strings"
 )
+
+type dataSet struct {
+	data []int
+}
 
 func main() {
 	port := "8000" //os.Getenv("PORT")
@@ -21,8 +26,8 @@ func main() {
 	if port == ":" {
 		log.Fatal("$PORT must be set")
 	}
-	http.HandleFunc("/", handler)
-	http.HandleFunc("/png/", imageHandler)
+	http.HandleFunc("/", imageHandler)
+	http.HandleFunc("/result/", imageHandler)
 	log.Fatal(http.ListenAndServe(":"+port, nil))
 }
 
@@ -34,10 +39,24 @@ func handler(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, string(content))
 }
 
-func imageHandler(w http.ResponseWriter, r *http.Request) {
-	const width, height = 256, 256
+func processDataSet(rawData string) []int {
+	tempData := strings.Split(rawData, " ")
+	data := []int{}
 
-	data := []int{10, 20, 50, 60, 44, 67, 33, 35} //expect this is a percentage
+	for _, v := range tempData {
+		tempVal, err := strconv.Atoi(v)
+		if err != nil {
+			fmt.Println("Error converting data to int")
+		}
+		data = append(data, tempVal)
+	}
+
+	fmt.Printf("processed Data=%v", data)
+	return data
+}
+
+func createImage(data []int) image.Image {
+	const width, height = 256, 256
 
 	buff := 10
 	wbar := (width - buff) / len(data) // width of bar
@@ -64,8 +83,26 @@ func imageHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var m image.Image = img
+	return m
+}
 
-	writeImageWithTemplate(w, &m)
+func imageHandler(w http.ResponseWriter, r *http.Request) {
+
+	fmt.Println("method:", r.Method)
+	r.ParseForm()
+
+	if r.Method != "get" && r.FormValue("userData") != "" {
+
+		fmt.Printf("userData=%s", r.FormValue("userData"))
+		data := processDataSet(r.FormValue("userData"))
+		img := createImage(data)
+		writeImageWithTemplate(w, &img)
+	} else {
+		data := []int{10, 20, 50, 60, 44, 67, 33, 35} //expect this is a percentage
+		img := createImage(data)
+		writeImageWithTemplate(w, &img)
+	}
+
 }
 
 // taken from sanarias.com
