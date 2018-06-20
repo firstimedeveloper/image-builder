@@ -1,17 +1,40 @@
 package main
 
 import (
+	"bytes"
+	"encoding/base64"
 	"fmt"
+	"html/template"
 	"image"
 	"image/color"
+	"image/jpeg"
 	"image/png"
 	"io/ioutil"
 	"log"
 	"net/http"
-	"os"
+	"strconv"
 )
 
 func main() {
+	port := "8000" //os.Getenv("PORT")
+
+	if port == ":" {
+		log.Fatal("$PORT must be set")
+	}
+	http.HandleFunc("/", handler)
+	http.HandleFunc("/png/", imageHandler)
+	log.Fatal(http.ListenAndServe(":"+port, nil))
+}
+
+func handler(w http.ResponseWriter, r *http.Request) {
+	content, err := ioutil.ReadFile("index.html")
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Fprintf(w, string(content))
+}
+
+func imageHandler(w http.ResponseWriter, r *http.Request) {
 	const width, height = 256, 256
 
 	data := []int{10, 20, 50, 60, 44, 67, 33, 35} //expect this is a percentage
@@ -40,31 +63,44 @@ func main() {
 		}
 	}
 
-	f, err := os.Create("image.png")
-	if err != nil {
-		log.Fatal(err)
-	}
-	if err := png.Encode(f, img); err != nil {
-		f.Close()
-		log.Fatal(err)
-	}
-	if err := f.Close(); err != nil {
-		log.Fatal(err)
-	}
+	var m image.Image = img
 
-	port := "8000" //os.Getenv("PORT")
-
-	if port == ":" {
-		log.Fatal("$PORT must be set")
-	}
-	http.HandleFunc("/", handler)
-	log.Fatal(http.ListenAndServe(":"+port, nil))
+	writeImageWithTemplate(w, &m)
 }
 
-func handler(w http.ResponseWriter, r *http.Request) {
-	content, err := ioutil.ReadFile("index.html")
-	if err != nil {
-		log.Fatal(err)
+// taken from sanarias.com
+// writeImage encodes an image 'img' in jpeg format and writes it into ResponseWriter.
+func writeImageAsPng(w http.ResponseWriter, img *image.Image) {
+	buffer := new(bytes.Buffer)
+	if err := png.Encode(buffer, *img); err != nil {
+		log.Println("unable to encode image")
 	}
-	fmt.Fprintf(w, string(content))
+
+	w.Header().Set("Content-Type", "image/png")
+	w.Header().Set("Content-Length", strconv.Itoa(len(buffer.Bytes())))
+	if _, err := w.Write(buffer.Bytes()); err != nil {
+		log.Println("unable to write image")
+	}
+}
+
+// taken from sanarias.com
+// Writeimagewithtemplate encodes an image 'img' in jpeg format and writes it into ResponseWriter using a template.
+func writeImageWithTemplate(w http.ResponseWriter, img *image.Image) {
+
+	//imageTemplate := template.Must(template.ParseFiles("index.html"))
+
+	buffer := new(bytes.Buffer)
+	if err := jpeg.Encode(buffer, *img, nil); err != nil {
+		log.Fatalln("unable to encode image.")
+	}
+
+	str := base64.StdEncoding.EncodeToString(buffer.Bytes())
+	if tmpl, err := template.ParseFiles("index.html"); err != nil {
+		log.Println("unable to parse image template.")
+	} else {
+		data := map[string]interface{}{"Image": str}
+		if err = tmpl.Execute(w, data); err != nil {
+			log.Println("unable to execute template.")
+		}
+	}
 }
