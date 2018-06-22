@@ -12,7 +12,6 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
-	"os"
 	"strconv"
 	"strings"
 )
@@ -22,7 +21,7 @@ type dataSet struct {
 }
 
 func main() {
-	port := os.Getenv("PORT")
+	port := "8000" //os.Getenv("PORT")
 
 	if port == ":" {
 		log.Fatal("$PORT must be set")
@@ -32,8 +31,8 @@ func main() {
 	log.Fatal(http.ListenAndServe(":"+port, nil))
 }
 
-func handler(w http.ResponseWriter, r *http.Request) {
-	content, err := ioutil.ReadFile("index.html")
+func invalidDataHandler(w http.ResponseWriter, r *http.Request) {
+	content, err := ioutil.ReadFile("invalid.html")
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -92,19 +91,28 @@ func imageHandler(w http.ResponseWriter, r *http.Request) {
 
 	fmt.Println("method:", r.Method)
 	r.ParseForm()
-	data, err := processDataSet(r.FormValue("userData"))
 
 	// if the user just reloaded the page, if nothing is written, or invalid numbers
 	// a new graph will not be created.
 	//
-	if r.Method != "get" && r.FormValue("userData") != "" && err == nil {
-		fmt.Printf("userData=%s", r.FormValue("userData"))
+	if r.Method == "POST" && r.FormValue("userData") != "" {
+		data, err := processDataSet(r.FormValue("userData"))
+		if err != nil {
+			// todo display information that input wasn't valid
+			fmt.Println("invalid input")
+			invalidDataHandler(w, r)
+		} else {
+			fmt.Printf("userData=%s", r.FormValue("userData"))
+			img := createImage(data)
+			writeImageWithTemplate(w, &img)
+		}
+
+	} else if r.Method == "GET" {
+		data := []int{10, 20, 50, 60, 44, 67, 33, 35} //expect this is a percentage
 		img := createImage(data)
 		writeImageWithTemplate(w, &img)
-	} else if r.Method != "get" {
-		// don't do anything
 	} else {
-		data := []int{10, 20, 50, 60, 44, 67, 33, 35} //expect this is a percentage
+		data := []int{0}
 		img := createImage(data)
 		writeImageWithTemplate(w, &img)
 	}
