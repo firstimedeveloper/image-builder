@@ -101,7 +101,9 @@ func imageHandler(w http.ResponseWriter, r *http.Request) {
 		fmt.Printf("userData=%s", r.FormValue("userData"))
 		img := createImage(data)
 		writeImageWithTemplate(w, &img)
-	} else if r.Method == "get" {
+	} else if r.Method != "get" {
+		// don't do anything
+	} else {
 		data := []int{10, 20, 50, 60, 44, 67, 33, 35} //expect this is a percentage
 		img := createImage(data)
 		writeImageWithTemplate(w, &img)
