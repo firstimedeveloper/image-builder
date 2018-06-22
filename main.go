@@ -40,7 +40,7 @@ func handler(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, string(content))
 }
 
-func processDataSet(rawData string) []int {
+func processDataSet(rawData string) ([]int, error) {
 	tempData := strings.Split(rawData, " ")
 	data := []int{}
 
@@ -48,12 +48,13 @@ func processDataSet(rawData string) []int {
 		tempVal, err := strconv.Atoi(v)
 		if err != nil {
 			fmt.Println("Error converting data to int")
+			return nil, err
 		}
 		data = append(data, tempVal)
 	}
 
 	fmt.Printf("processed Data=%v", data)
-	return data
+	return data, nil
 }
 
 func createImage(data []int) image.Image {
@@ -91,14 +92,16 @@ func imageHandler(w http.ResponseWriter, r *http.Request) {
 
 	fmt.Println("method:", r.Method)
 	r.ParseForm()
+	data, err := processDataSet(r.FormValue("userData"))
 
-	if r.Method != "get" && r.FormValue("userData") != "" {
-
+	// if the user just reloaded the page, if nothing is written, or invalid numbers
+	// a new graph will not be created.
+	//
+	if r.Method != "get" && r.FormValue("userData") != "" && err == nil {
 		fmt.Printf("userData=%s", r.FormValue("userData"))
-		data := processDataSet(r.FormValue("userData"))
 		img := createImage(data)
 		writeImageWithTemplate(w, &img)
-	} else {
+	} else if r.Method == "get" {
 		data := []int{10, 20, 50, 60, 44, 67, 33, 35} //expect this is a percentage
 		img := createImage(data)
 		writeImageWithTemplate(w, &img)
